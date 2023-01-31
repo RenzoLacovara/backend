@@ -1,5 +1,6 @@
 class Product {
-  static id = 0;
+  static id = 1;
+
   constructor(title, description, price, thumbnail, code, stock) {
     this.title = title;
     this.description = description;
@@ -15,6 +16,7 @@ class ProductManager {
   #productDirPath;
   #productsFilePath;
   #fileSystem;
+
   constructor() {
     this.#products = [];
     this.#productDirPath = "./module1/files";
@@ -40,15 +42,15 @@ class ProductManager {
       stock
     );
     try {
+      await this.#prepareDir();
       await this.getProducts();
       if (title && description && price && thumbnail && code && stock) {
         if (this.#products.some((product) => product.code === code)) {
           console.log("Codigo repetido");
         } else {
           this.#products.push(newProduct);
-          console.log("Lista actualizada de productos: ");
           console.log(this.#products);
-          await this.#fileSystem.promises.writeFile(
+          this.#fileSystem.promises.writeFile(
             this.#productsFilePath,
             JSON.stringify(this.#products)
           );
@@ -57,11 +59,6 @@ class ProductManager {
         console.log("no se aceptan valores null, undefined, o vacios");
       }
     } catch (error) {
-      console.error(
-        `Error creando producto nuevo: ${JSON.stringify(
-          newProduct
-        )}, detalle del error: ${error}`
-      );
       throw Error(
         `Error creando producto nuevo: ${JSON.stringify(
           newProduct
@@ -76,17 +73,10 @@ class ProductManager {
         this.#productsFilePath,
         "utf-8"
       );
-      console.info("Archivo JSON obtenido desde archivo: ");
-      console.log(prodFile);
       this.#products = JSON.parse(prodFile);
-      console.log("Productos encontrados: ");
       console.log(this.#products);
       return this.#products;
     } catch (error) {
-      console.error(`Error consultando los productos por archivo, valide el archivo: ${
-        this.#productDirPath
-      }, 
-          detalle del error: ${error}`);
       throw Error(`Error consultando los productos por archivo, valide el archivo: ${
         this.#productDirPath
       },
@@ -95,17 +85,80 @@ class ProductManager {
   };
   getProductById = async (code) => {
     await this.getProducts();
-    const productfilter = this.#products.find(
-      (product) => product.code === code
-    );
+    let productfilter = this.#products.find((product) => product.code === code);
     if (productfilter) {
-      console.log("Producto encontrado:" + productfilter.title);
+      console.log(`Producto encontrado: ${productfilter.title}`);
     } else {
-      console.log("Codigo: " + code + " no arroja resultados");
+      console.log(`Codigo: ${code} no arroja resultados`);
     }
   };
 
-  updateProduct = () => {};
-  deleteProduct = () => {};
+  updateProduct = async (id, newProd) => {
+    await this.getProducts();
+    const updatedProducts = this.#products.map((prod) => {
+      if (prod.id === id) {
+        return { ...prod, ...newProd };
+      } else {
+        return prod;
+      }
+    });
+    this.#products = updatedProducts;
+    this.#fileSystem.promises.writeFile(
+      this.#productsFilePath,
+      JSON.stringify(this.#products)
+    );
+    console.log(this.#products);
+  };
+  deleteProduct = async (code) => {
+    await this.getProducts();
+    if (this.#products.find((prod) => prod.code === code)) {
+      let filteredProducts = this.#products.filter(
+        (prod) => prod.code !== code
+      );
+      this.#products = filteredProducts;
+      this.#fileSystem.promises.writeFile(
+        this.#productsFilePath,
+        JSON.stringify(this.#products)
+      );
+      console.log(this.#products);
+    } else {
+      console.log(`producto con codigo ${code} no encontrado`);
+    }
+  };
 }
 let productManager = new ProductManager();
+// productManager.getProducts();
+// productManager.addProduct(
+//   "Uzumaki",
+//   "Novela de terror por el mangaka Junji Ito",
+//   100,
+//   "no image",
+//   112,
+//   30
+// );
+// productManager.addProduct(
+//   "Uzumaki",
+//   "Novela de terror por el mangaka Junji Ito",
+//   100,
+//   "no image",
+//   112,
+//   30
+// );
+// productManager.addProduct(
+//   "Mob Psycho",
+//   "Novela de aventura por ONE",
+//   130,
+//   "no image",
+//   113,
+//   25
+// );
+// productManager.getProducts();
+// productManager.getProductById(112);
+// productManager.updateProduct(1, {
+//   title: "Akira",
+//   description: "novela cyberpunk por el mangaka Katsuhiro Ōtomo",
+//   price: 150,
+//   stock: 15,
+// });
+// productManager.deleteProduct(112);
+// productManager.getProducts();
